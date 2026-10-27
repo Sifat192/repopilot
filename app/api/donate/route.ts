@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';
+export async function POST(request:Request){const {amount}=await request.json();const link=process.env.RAZORPAY_PAYMENT_PAGE_URL;if(!link)return NextResponse.json({error:'Donation gateway is not configured yet.'},{status:503});if(!Number.isFinite(amount)||amount<1||amount>100000)return NextResponse.json({error:'Invalid donation amount'},{status:400});return NextResponse.json({url:link});}
