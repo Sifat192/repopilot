@@ -35,7 +35,19 @@ method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
 body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:6000}}),
 signal:AbortSignal.timeout(55000)});
 const data=await response.json();
-if(!response.ok){const status=response.status===429?429:response.status===400?400:502;return NextResponse.json({error:response.status===429?'Gemini rate limit or free-tier quota reached. Try again later.':response.status===400?'Gemini rejected the request. Check GEMINI_MODEL and your API key.':'Gemini request failed. Check your API key, model access and Vercel logs.'},{status});}
+if(!response.ok){
+const googleCode=String(data?.error?.status||'');
+const googleMessage=String(data?.error?.message||'');
+console.error('Gemini API failure',{httpStatus:response.status,googleCode,googleMessage:googleMessage.slice(0,800),model});
+let message='Gemini API error ('+response.status+'). ';
+if(response.status===401||response.status===403)message+='API key invalid, restricted, or not authorized for this model. Check Google AI Studio key settings.';
+else if(response.status===404)message+='Model not found or unavailable. Check GEMINI_MODEL; try gemini-2.5-flash.';
+else if(response.status===429)message+='Free-tier quota or rate limit reached. Check usage limits in Google AI Studio.';
+else if(response.status===400)message+='Request rejected. Check model access and the Vercel function logs.';
+else if(response.status>=500)message+='Google service temporarily unavailable. Try again later.';
+else message+='Check the Vercel function logs for details.';
+return NextResponse.json({error:message,code:googleCode||undefined},{status:response.status===429?429:502});
+}
 const markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
 return NextResponse.json({markdown});
