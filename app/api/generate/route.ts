@@ -36,32 +36,48 @@ if(!listResponse.ok){console.error('Gemini model discovery failed',{status:listR
 const listing=await listResponse.json();
 const supported=(listing.models||[]).filter((m:{name?:string;supportedGenerationMethods?:string[]})=>m.name?.startsWith('models/')&&m.supportedGenerationMethods?.includes('generateContent')).map((m:{name:string})=>m.name.slice(7)).filter((name:string)=>/^gemini-[0-9.]+-(flash|flash-lite|pro)(?:-latest)?$/.test(name));
 if(!supported.length)return NextResponse.json({error:'No supported Gemini text models found. Check Google AI Studio model access.'},{status:503});
-const preferences=['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite','gemini-2.5-flash'];
-const model=(requestedModel&&supported.includes(requestedModel)?requestedModel:preferences.find(m=>supported.includes(m)))||supported[0];
-if(requestedModel&&!supported.includes(requestedModel))console.warn('Configured model not suitable for text docs',{requestedModel,model});
-const candidates=[model];
+const preferences=['gemini-3.5-flash-lite','gemini-3.8-flash','gemini-3-flash'];
+const available=preferences.filter(name=>supported.includes(name));
+if(!available.length)return NextResponse.json({error:'No preferred Gemini text models available to this key. Available: '+supported.join(', ')},{status:503});
+const model=requestedModel&&available.includes(requestedModel)?requestedModel:available[0];
+if(requestedModel&&requestedModel!==model)console.warn('Using preferred text model instead of configured model',{requestedModel,model});
+const candidates=[model,...available.filter(name=>name!==model)].slice(0,2);
 let data:any=null;
 let successful=false;
 let lastStatus=0;
 let lastMessage='';
 let lastModel=model;
+const deadline=Date.now()+42000;
 for(const candidate of candidates){
+const remaining=deadline-Date.now();
+if(remaining<5000)break;
+try{
 const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent`,{
 method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:1800,thinkingConfig:{thinkingBudget:0}}}),
-signal:AbortSignal.timeout(40000)});
+body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:1800}}),
+signal:AbortSignal.timeout(Math.min(24000,remaining))});
 data=await response.json();
 lastStatus=response.status;
 lastModel=candidate;
 if(response.ok){successful=true;break;}
 lastMessage=String(data?.error?.message||'').slice(0,500);
 console.error('Gemini generation failed',{status:lastStatus,model:candidate,message:lastMessage});
-if(response.status!==404)break;
+if(![404,503].includes(response.status))break;
+}catch(e){
+const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');
+if(!timeout)throw e;
+lastStatus=504;
+lastModel=candidate;
+lastMessage='Model response timed out';
+console.warn('Gemini model timed out',{model:candidate});
+}
 }
 if(!successful){
-if(lastStatus===429)return NextResponse.json({error:'Gemini free-tier rate limit reached for '+lastModel+'. Wait for quota to reset, then try a smaller repository. Check Google AI Studio usage.'},{status:429});
-const safeMessage=lastMessage.replace(/AIza[0-9A-Za-z_-]{20,}/g,'[REDACTED]').replace(/key=[^\\s&]+/gi,'key=[REDACTED]');
-return NextResponse.json({error:`Gemini API error (${lastStatus}) on ${lastModel}: ${safeMessage||'No error detail returned by Google.'}`},{status:lastStatus===429?429:502});
+if(lastStatus===429)return NextResponse.json({error:'Gemini free-tier quota reached. Wait for quota to reset before retrying.'},{status:429});
+if(lastStatus===503)return NextResponse.json({error:'Gemini is temporarily overloaded. Please try again later.'},{status:503});
+if(lastStatus===504)return NextResponse.json({error:'Gemini took too long to respond. Please try again later.'},{status:504});
+const safeMessage=lastMessage.replace(/AIza[0-9A-Za-z_-]{20,}/g,'[REDACTED]');
+return NextResponse.json({error:`Gemini API error (${lastStatus}) on ${lastModel}: ${safeMessage||'No detail returned'}`},{status:502});
 }
 const markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
