@@ -35,10 +35,10 @@ if(!listResponse.ok){console.error('Gemini model discovery failed',{status:listR
 const listing=await listResponse.json();
 const supported=(listing.models||[]).filter((m:{name?:string;supportedGenerationMethods?:string[]})=>m.name?.startsWith('models/')&&m.supportedGenerationMethods?.includes('generateContent')).map((m:{name:string})=>m.name.slice(7)).filter((name:string)=>/^gemini-[0-9.]+-(flash|flash-lite|pro)(?:-latest)?$/.test(name));
 if(!supported.length)return NextResponse.json({error:'No supported Gemini text models found. Check Google AI Studio model access.'},{status:503});
-const preferences=['gemini-2.5-flash-lite','gemini-2.5-flash','gemini-2.0-flash'];
+const preferences=['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite','gemini-2.5-flash'];
 const model=(requestedModel&&supported.includes(requestedModel)?requestedModel:preferences.find(m=>supported.includes(m)))||supported[0];
 if(requestedModel&&!supported.includes(requestedModel))console.warn('Configured model not suitable for text docs',{requestedModel,model});
-const candidates=[model,...preferences.filter(m=>supported.includes(m)&&m!==model)].slice(0,3);
+const candidates=[...new Set([model,...preferences.filter(m=>supported.includes(m)),...supported])].slice(0,8);
 let data:any=null;
 let successful=false;
 let lastStatus=0;
