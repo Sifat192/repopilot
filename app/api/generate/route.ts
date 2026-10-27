@@ -38,23 +38,28 @@ if(!supported.length)return NextResponse.json({error:'No Gemini text-generation 
 const preferences=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'];
 const model=(requestedModel&&supported.includes(requestedModel)?requestedModel:preferences.find(m=>supported.includes(m)))||supported.find((m:string)=>/flash/i.test(m))||supported[0];
 if(requestedModel&&!supported.includes(requestedModel))console.warn('Configured Gemini model unavailable; selected discovered model',{requestedModel,model});
-const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
+const candidates=[model,...preferences.filter(m=>supported.includes(m)&&m!==model),...supported.filter((m:string)=>/flash/i.test(m)&&m!==model&&!preferences.includes(m))].slice(0,5);
+let data:any=null;
+let successful=false;
+let lastStatus=0;
+let lastMessage='';
+let lastModel=model;
+for(const candidate of candidates){
+const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent`,{
 method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
 body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:6000}}),
-signal:AbortSignal.timeout(55000)});
-const data=await response.json();
-if(!response.ok){
-const googleCode=String(data?.error?.status||'');
-const googleMessage=String(data?.error?.message||'');
-console.error('Gemini API failure',{httpStatus:response.status,googleCode,googleMessage:googleMessage.slice(0,800),model});
-let message='Gemini API error ('+response.status+') using '+model+'. ';
-if(response.status===401||response.status===403)message+='API key invalid, restricted, or not authorized for this model.';
-else if(response.status===404)message+='Model was listed but generation endpoint is unavailable. Check Vercel logs.';
-else if(response.status===429)message+='Free-tier quota or rate limit reached. Check Google AI Studio usage.';
-else if(response.status===400)message+='Request rejected. Check Vercel logs for details.';
-else if(response.status>=500)message+='Google service temporarily unavailable. Try again later.';
-else message+='Check Vercel logs.';
-return NextResponse.json({error:message,code:googleCode||undefined},{status:response.status===429?429:502});
+signal:AbortSignal.timeout(45000)});
+data=await response.json();
+lastStatus=response.status;
+lastModel=candidate;
+if(response.ok){successful=true;break;}
+lastMessage=String(data?.error?.message||'').slice(0,500);
+console.error('Gemini generation failed',{status:lastStatus,model:candidate,message:lastMessage});
+if(response.status!==404)break;
+}
+if(!successful){
+const safeMessage=lastMessage.replace(/AIza[0-9A-Za-z_-]{20,}/g,'[REDACTED]').replace(/key=[^\\s&]+/gi,'key=[REDACTED]');
+return NextResponse.json({error:`Gemini API error (${lastStatus}) on ${lastModel}: ${safeMessage||'No error detail returned by Google.'}`},{status:lastStatus===429?429:502});
 }
 const markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
