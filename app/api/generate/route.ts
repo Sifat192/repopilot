@@ -1,5 +1,6 @@
 import {NextResponse} from 'next/server';
 export const runtime='nodejs';
+export const maxDuration=60;
 const allowed=/\.(md|txt|json|ya?ml|toml|js|jsx|ts|tsx|py|go|rs|java|sh|html|css|sql|c|cpp|h)$/i;
 export async function POST(request:Request){try{
 const {url,mode}=await request.json();
@@ -47,8 +48,8 @@ let lastModel=model;
 for(const candidate of candidates){
 const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent`,{
 method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:3000}}),
-signal:AbortSignal.timeout(18000)});
+body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:1800,thinkingConfig:{thinkingBudget:0}}}),
+signal:AbortSignal.timeout(40000)});
 data=await response.json();
 lastStatus=response.status;
 lastModel=candidate;
@@ -65,4 +66,4 @@ return NextResponse.json({error:`Gemini API error (${lastStatus}) on ${lastModel
 const markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
 return NextResponse.json({markdown});
-}catch(e){const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');return NextResponse.json({error:timeout?'Gemini request timed out. Try again shortly or choose a smaller repository.':e instanceof Error?e.message:'Generation failed'},{status:timeout?504:500})}}
+}catch(e){const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');return NextResponse.json({error:timeout?'Gemini did not respond within 40 seconds. Check Vercel function duration and Gemini model latency in logs.':e instanceof Error?e.message:'Generation failed'},{status:timeout?504:500})}}
