@@ -1,5 +1,5 @@
-import ThemeToggle from '../theme-toggle';
 'use client';
+import ThemeToggle from '../theme-toggle';
 import {useEffect,useState} from 'react';
 import {getProviders,signIn} from 'next-auth/react';
 import {Github,ArrowLeft,ShieldCheck,Terminal} from 'lucide-react';
