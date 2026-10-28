@@ -1,4 +1,4 @@
-import {NextResponse} from 'next/server';
+import {NextRequest,NextResponse} from 'next/server';
 import {getToken} from 'next-auth/jwt';
 import {randomUUID} from 'crypto';
 
@@ -16,10 +16,10 @@ async function api(token:string,path:string,init:RequestInit={}){
   if(!response.ok)throw new Error(`GitHub request failed (${response.status}): ${String(data.message||'Please retry').slice(0,180)}`);
   return data;
 }
-export async function POST(request:Request){
+export async function POST(request:NextRequest){
   try{
     if(!process.env.NEXTAUTH_SECRET)return NextResponse.json({error:'GitHub sign-in is not configured.'},{status:503});
-    const session=await getToken({req:request as Parameters<typeof getToken>[0]['req'],secret:process.env.NEXTAUTH_SECRET});
+    const session=await getToken({req:request,secret:process.env.NEXTAUTH_SECRET});
     const token=session?.githubAccessToken;
     if(typeof token!=='string')return NextResponse.json({error:'Sign in with GitHub to publish a pull request.'},{status:401});
     const body=await request.json();
