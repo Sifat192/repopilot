@@ -6,10 +6,12 @@ export const maxDuration=60;
 const allowed=/\.(md|txt|json|ya?ml|toml|js|jsx|ts|tsx|py|go|rs|java|sh|html|css|sql|c|cpp|h)$/i;
 export async function POST(request:NextRequest){try{
 const limited=await checkRateLimit(request,'generate');if(limited)return limited;
+const contentLength=Number(request.headers.get('content-length')||0);
+if(contentLength>4096)return NextResponse.json({error:'Request is too large.'},{status:413});
 const bodyText=await request.text();
-if(bodyText.length>4096)return NextResponse.json({error:'Request is too large.'},{status:413});
+if(Buffer.byteLength(bodyText,'utf8')>4096)return NextResponse.json({error:'Request is too large.'},{status:413});
 let payload:{url?:string;mode?:'create'|'update'};try{payload=JSON.parse(bodyText)}catch{return NextResponse.json({error:'Invalid JSON request.'},{status:400})}
-const {url,mode}=payload;
+const {url,mode}=payload||{};
 if(typeof url!=='string'||(mode!=='create'&&mode!=='update'))return NextResponse.json({error:'Invalid input'},{status:400});
 let parsed:URL;try{parsed=new URL(url)}catch{return NextResponse.json({error:'Invalid repository URL'},{status:400})}
 if(parsed.protocol!=='https:'||parsed.hostname!=='github.com'||parsed.username||parsed.password||parsed.port||parsed.search||parsed.hash)return NextResponse.json({error:'Enter a github.com repository URL'},{status:400});
@@ -25,13 +27,13 @@ if(info.private)return NextResponse.json({error:'Private repositories are not su
 const treeRes=await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(info.default_branch)}?recursive=1`,{headers,signal:AbortSignal.timeout(12000)});
 if(!treeRes.ok)throw Error('Unable to read repository tree');
 const tree=await treeRes.json();
-const files=(tree.tree||[]).filter((f:any)=>f.type==='blob'&&typeof f.size==='number'&&f.size<30000&&typeof f.path==='string'&&allowed.test(f.path)&&!/(^|\/)(node_modules|dist|build|vendor|\.next|coverage|lockfiles)(\/|$)/.test(f.path));
+const files=(Array.isArray(tree.tree)?tree.tree:[]).filter((f:any)=>f.type==='blob'&&typeof f.size==='number'&&f.size<30000&&typeof f.path==='string'&&allowed.test(f.path)&&!/(^|\/)(node_modules|dist|build|vendor|\.next|coverage|lockfiles)(\/|$)/.test(f.path));
 const priority=(p:string)=>['package.json','pyproject.toml','Cargo.toml','go.mod','requirements.txt'].includes(p)?0:['README.md','.env.example','app/api/generate/route.ts','app/page.tsx','app/api/auth/[...nextauth]/route.ts','src/index.ts','src/index.tsx'].includes(p)?1:/^(src|app|lib|docs)\//.test(p)?2:3;
 files.sort((a:any,b:any)=>priority(a.path)-priority(b.path));
 const chosen=files.slice(0,9);
 const contents=await Promise.all(chosen.map(async(f:any)=>{try{
 const r=await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(info.default_branch)}/${f.path.split('/').map(encodeURIComponent).join('/')}`,{signal:AbortSignal.timeout(7000)});
-if(!r.ok)return '';return `\n--- ${f.path} ---\n${(await r.text()).slice(0,2200)}`;
+if(!r.ok)return '';const sample=(await r.text()).slice(0,2200).replace(/(AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,})/g,'[REDACTED]');return `\n--- ${f.path} ---\n${sample}`;
 }catch{return ''}}));
 const key=process.env.GEMINI_API_KEY || process.env.gemini_key;
 if(!key)return NextResponse.json({error:'Set GEMINI_API_KEY (or gemini_key) in Vercel Environment Variables and redeploy.'},{status:503});
