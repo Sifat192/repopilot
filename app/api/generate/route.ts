@@ -1,8 +1,10 @@
+import {checkRateLimit} from '../../../lib/rate-limit';
 import {NextResponse} from 'next/server';
 export const runtime='nodejs';
 export const maxDuration=60;
 const allowed=/\.(md|txt|json|ya?ml|toml|js|jsx|ts|tsx|py|go|rs|java|sh|html|css|sql|c|cpp|h)$/i;
 export async function POST(request:Request){try{
+const limited=await checkRateLimit(request,'generate');if(limited)return limited;
 const {url,mode}=await request.json();
 if(typeof url!=='string'||!['create','update'].includes(mode))return NextResponse.json({error:'Invalid input'},{status:400});
 let parsed:URL;try{parsed=new URL(url)}catch{return NextResponse.json({error:'Invalid repository URL'},{status:400})}
