@@ -8,9 +8,9 @@ export async function POST(request:NextRequest){try{
 const limited=await checkRateLimit(request,'generate');if(limited)return limited;
 const bodyText=await request.text();
 if(bodyText.length>4096)return NextResponse.json({error:'Request is too large.'},{status:413});
-let payload:{url?:unknown;mode?:unknown};try{payload=JSON.parse(bodyText)}catch{return NextResponse.json({error:'Invalid JSON request.'},{status:400})}
+let payload:{url?:string;mode?:'create'|'update'};try{payload=JSON.parse(bodyText)}catch{return NextResponse.json({error:'Invalid JSON request.'},{status:400})}
 const {url,mode}=payload;
-if(typeof url!=='string'||!['create','update'].includes(mode))return NextResponse.json({error:'Invalid input'},{status:400});
+if(typeof url!=='string'||(mode!=='create'&&mode!=='update'))return NextResponse.json({error:'Invalid input'},{status:400});
 let parsed:URL;try{parsed=new URL(url)}catch{return NextResponse.json({error:'Invalid repository URL'},{status:400})}
 if(parsed.protocol!=='https:'||parsed.hostname!=='github.com'||parsed.username||parsed.password||parsed.port||parsed.search||parsed.hash)return NextResponse.json({error:'Enter a github.com repository URL'},{status:400});
 const parts=parsed.pathname.split('/').filter(Boolean);
