@@ -19,10 +19,18 @@ const authOptions:NextAuthOptions={
   secret:process.env.NEXTAUTH_SECRET,
   callbacks:{
     async jwt({token,account}){
-      if(account?.provider==='github'&&account.access_token){
-        token.githubAccessToken=account.access_token;
+      if(account){
+        token.loginProvider=account.provider;
+        if(account.provider==='github'&&account.access_token){
+          token.githubAccessToken=account.access_token;
+        }else{
+          delete token.githubAccessToken;
+        }
       }
       return token;
+    },
+    async session({session,token}){
+      return {...session,githubConnected:typeof token.githubAccessToken==='string',loginProvider:token.loginProvider};
     }
   }
 };
