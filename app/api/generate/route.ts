@@ -6,22 +6,26 @@ export const maxDuration=60;
 const allowed=/\.(md|txt|json|ya?ml|toml|js|jsx|ts|tsx|py|go|rs|java|sh|html|css|sql|c|cpp|h)$/i;
 export async function POST(request:NextRequest){try{
 const limited=await checkRateLimit(request,'generate');if(limited)return limited;
-const {url,mode}=await request.json();
+const bodyText=await request.text();
+if(bodyText.length>4096)return NextResponse.json({error:'Request is too large.'},{status:413});
+let payload:{url?:unknown;mode?:unknown};try{payload=JSON.parse(bodyText)}catch{return NextResponse.json({error:'Invalid JSON request.'},{status:400})}
+const {url,mode}=payload;
 if(typeof url!=='string'||!['create','update'].includes(mode))return NextResponse.json({error:'Invalid input'},{status:400});
 let parsed:URL;try{parsed=new URL(url)}catch{return NextResponse.json({error:'Invalid repository URL'},{status:400})}
-if(parsed.protocol!=='https:'||parsed.hostname!=='github.com')return NextResponse.json({error:'Enter a github.com repository URL'},{status:400});
+if(parsed.protocol!=='https:'||parsed.hostname!=='github.com'||parsed.username||parsed.password||parsed.port||parsed.search||parsed.hash)return NextResponse.json({error:'Enter a github.com repository URL'},{status:400});
 const parts=parsed.pathname.split('/').filter(Boolean);
-if(parts.length!==2||!parts.every((x:string)=>/^[\w.-]+$/.test(x)))return NextResponse.json({error:'Use https://github.com/owner/repo'},{status:400});
+if(parts.length!==2||!parts.every((x:string)=>/^[A-Za-z0-9_.-]{1,100}$/.test(x)&&x!=='.'&&x!=='..'))return NextResponse.json({error:'Use https://github.com/owner/repo'},{status:400});
 const [owner,repo]=parts;
 const headers:HeadersInit={'Accept':'application/vnd.github+json','User-Agent':'RepoPilot-MVP'};
 const infoRes=await fetch(`https://api.github.com/repos/${owner}/${repo}`,{headers,signal:AbortSignal.timeout(10000)});
 if(!infoRes.ok)return NextResponse.json({error:'Repository not found or GitHub API unavailable'},{status:404});
 const info=await infoRes.json();
+if(typeof info.default_branch!=='string'||!info.default_branch)return NextResponse.json({error:'Repository has no readable default branch.'},{status:422});
 if(info.private)return NextResponse.json({error:'Private repositories are not supported'},{status:403});
 const treeRes=await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(info.default_branch)}?recursive=1`,{headers,signal:AbortSignal.timeout(12000)});
 if(!treeRes.ok)throw Error('Unable to read repository tree');
 const tree=await treeRes.json();
-const files=(tree.tree||[]).filter((f:any)=>f.type==='blob'&&f.size<30000&&allowed.test(f.path)&&!/(^|\/)(node_modules|dist|build|vendor|\.next|coverage|lockfiles)(\/|$)/.test(f.path));
+const files=(tree.tree||[]).filter((f:any)=>f.type==='blob'&&typeof f.size==='number'&&f.size<30000&&typeof f.path==='string'&&allowed.test(f.path)&&!/(^|\/)(node_modules|dist|build|vendor|\.next|coverage|lockfiles)(\/|$)/.test(f.path));
 const priority=(p:string)=>['package.json','pyproject.toml','Cargo.toml','go.mod','requirements.txt'].includes(p)?0:['README.md','.env.example','app/api/generate/route.ts','app/page.tsx','app/api/auth/[...nextauth]/route.ts','src/index.ts','src/index.tsx'].includes(p)?1:/^(src|app|lib|docs)\//.test(p)?2:3;
 files.sort((a:any,b:any)=>priority(a.path)-priority(b.path));
 const chosen=files.slice(0,9);
@@ -80,8 +84,8 @@ if(!successful){
 if(lastStatus===429)return NextResponse.json({error:'Gemini free-tier quota reached. Wait for quota to reset before retrying.'},{status:429});
 if(lastStatus===503)return NextResponse.json({error:'Gemini is temporarily overloaded. Please try again later.'},{status:503});
 if(lastStatus===504)return NextResponse.json({error:'Gemini took too long to respond. Please try again later.'},{status:504});
-const safeMessage=lastMessage.replace(/AIza[0-9A-Za-z_-]{20,}/g,'[REDACTED]');
-return NextResponse.json({error:`Gemini API error (${lastStatus}) on ${lastModel}: ${safeMessage||'No detail returned'}`},{status:502});
+
+return NextResponse.json({error:'Gemini could not generate documentation (HTTP '+lastStatus+'). Please retry later.'},{status:502});
 }
 let markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 // Retired model names must never be offered as working configuration examples.
@@ -89,4 +93,4 @@ if(owner.toLowerCase()==='sifat192'&&repo.toLowerCase()==='repopilot')markdown=m
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
 await recordActivity(await activityUser(request),'generation',mode,owner+'/'+repo);
 return NextResponse.json({markdown});
-}catch(e){const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');return NextResponse.json({error:timeout?'Gemini did not respond within 40 seconds. Check Vercel function duration and Gemini model latency in logs.':e instanceof Error?e.message:'Generation failed'},{status:timeout?504:500})}}
+}catch(e){const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');return NextResponse.json({error:timeout?'Generation timed out. Please retry later.':'Generation failed. Please retry later.'},{status:timeout?504:500})}}
