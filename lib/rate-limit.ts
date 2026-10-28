@@ -24,10 +24,10 @@ export async function checkRateLimit(request:Request,action:'generate'|'publish'
   const windowSeconds=3600;
   const key=`repopilot:rl:${action}:${hash}`;
   try{
-    const response=await fetch(`${url.replace(/\/$/,'')}/eval`,{
+    const response=await fetch(`${url.replace(/\/$/,'')}`,{
       method:'POST',
       headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify([script,1,key,windowSeconds]),
+      body:JSON.stringify(['EVAL',script,1,key,windowSeconds]),
       cache:'no-store',
       signal:AbortSignal.timeout(5000)
     });
