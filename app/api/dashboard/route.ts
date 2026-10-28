@@ -20,16 +20,17 @@ export async function GET(req:NextRequest){
       return `r${i}:repository(owner:${JSON.stringify(owner)},name:${JSON.stringify(name)}){readme:object(expression:"HEAD:README.md"){__typename}}`;
     });
     const gh=async(url:string,init?:RequestInit)=>fetch(url,{...init,headers:{...headers,...(init?.headers||{})},cache:'no-store',signal:AbortSignal.timeout(12000)});
-    const [profileRes,healthRes]=await Promise.all([
+    const [profileRes,healthRes]=await Promise.allSettled([
       gh('https://api.github.com/user'),
       queries.length?gh('https://api.github.com/graphql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:`query{${queries.join(' ')}}`})}):Promise.resolve(null)
     ]);
-    const profileData=profileRes.ok?await profileRes.json():null;
-    const healthData=healthRes?.ok?await healthRes.json():null;
-    const health=healthData?.errors?null:healthData?.data;
+    const profileData=profileRes.status==='fulfilled'&&profileRes.value.ok?await profileRes.value.json().catch(()=>null):null;
+    const healthData=healthRes.status==='fulfilled'&&healthRes.value?.ok?await healthRes.value.json().catch(()=>null):null;
+    const health=healthData?.data||null;
+    const healthErrors=new Set((healthData?.errors||[]).flatMap((e:{path?:unknown[]})=>Array.isArray(e.path)&&typeof e.path[0]==='string'?[e.path[0]]:[]));
     const repositories=safeRepos.map((r:{id:number;full_name:string;html_url:string;description:string|null;language:string|null;stargazers_count:number;updated_at:string;permissions?:{push?:boolean};default_branch:string},i:number)=>({
       id:r.id,name:r.full_name,url:r.html_url,description:r.description,language:r.language,stars:r.stargazers_count,updatedAt:r.updated_at,canPublish:Boolean(r.permissions?.push),defaultBranch:r.default_branch,
-      hasReadme:health?.[`r${i}`]?.readme?.__typename==='Blob'?true:health?.[`r${i}`]?false:null
+      hasReadme:healthErrors.has(`r${i}`)?null:health?.[`r${i}`]?.readme?.__typename==='Blob'?true:health?.[`r${i}`]?false:null
     }));
     const profile=profileData&&typeof profileData.login==='string'?{login:profileData.login,name:profileData.name||null,avatarUrl:profileData.avatar_url||null,htmlUrl:profileData.html_url||null}:null;
     return NextResponse.json({connected:true,repositories,profile,healthAvailable:Boolean(health)},{headers:{'Cache-Control':'private, no-store'}});
