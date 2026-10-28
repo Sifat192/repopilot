@@ -15,6 +15,7 @@ if(process.env.GITHUB_CLIENT_ID&&process.env.GITHUB_CLIENT_SECRET)
 const authOptions:NextAuthOptions={
   providers,
   session:{strategy:'jwt'},
+  pages:{signIn:'/signin'},
   secret:process.env.NEXTAUTH_SECRET,
   callbacks:{
     async jwt({token,account}){
