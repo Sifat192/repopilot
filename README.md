@@ -2,6 +2,8 @@
 
 RepoPilot is an AI-powered GitHub documentation generator and updater built with Next.js and deployed on Vercel. It analyzes public GitHub repositories to automatically generate or update comprehensive README files using Google's Gemini AI.
 
+**Live app:** [repopilot-bice.vercel.app](https://repopilot-bice.vercel.app/)
+
 ## Purpose
 
 RepoPilot simplifies the creation and maintenance of open-source project documentation. By scanning a repository's directory tree and key source files, it synthesizes repository metadata and code structures into structured, professional Markdown documentation.
@@ -62,3 +64,7 @@ Contributions are welcome! Please open an issue or submit a pull request for imp
 - **Public Repositories Only**: The current MVP restricts analysis and generation to public GitHub repositories. Private repositories are not supported.
 - **API Limits**: The free Gemini tier and GitHub API requests are subject to availability, region, and rate limits.
 - **Draft PRs**: Publishing changes automatically opens a draft pull request on repositories with write access; automatic merging is intentionally excluded so you retain full control.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
