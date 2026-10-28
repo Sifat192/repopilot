@@ -1,3 +1,4 @@
+import {activityUser,recordActivity} from '../../../lib/activity';
 import {acquirePublishLock} from '../../../lib/pr-lock';
 import {checkRateLimit} from '../../../lib/rate-limit';
 import {NextRequest,NextResponse} from 'next/server';
@@ -129,6 +130,7 @@ export async function POST(request:NextRequest){
       })
     });
     createdBranch=null;
+    await recordActivity(await activityUser(request),'pull_request',mode,owner+'/'+repo,pr.html_url);
     return NextResponse.json({url:pr.html_url,number:pr.number});
   }catch(e){
     if(createdBranch){
