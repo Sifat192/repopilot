@@ -37,6 +37,7 @@ export async function POST(request:NextRequest){
     if(info.private)return NextResponse.json({error:'Private repositories are not supported yet.'},{status:403});
     if(!info.permissions?.push)return NextResponse.json({error:'Your GitHub account needs write access to this repository to open a PR.'},{status:403});
     const defaultBranch=String(info.default_branch);
+    // The branch and PR are intentionally created only for a repository with write access.
     const ref=await api(token,`${base}/git/ref/heads/${encodeURIComponent(defaultBranch)}`);
     const branch=`repopilot/readme-${randomUUID().slice(0,12)}`;
     await api(token,`${base}/git/refs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branch}`,sha:ref.object.sha})});
