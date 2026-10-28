@@ -38,8 +38,9 @@ export async function POST(request:NextRequest){
 
     const limited=await checkRateLimit(request,'publish',String(session?.sub||''));
     if(limited)return limited;
+    if(Number(request.headers.get('content-length')||0)>400000)return NextResponse.json({error:'Request is too large.'},{status:413});
     const rawBody=await request.text();
-    if(rawBody.length>400000)return NextResponse.json({error:'Request is too large.'},{status:413});
+    if(Buffer.byteLength(rawBody,'utf8')>400000)return NextResponse.json({error:'Request is too large.'},{status:413});
     const body=(()=>{try{return JSON.parse(rawBody)}catch{return null}})();
     const {url,markdown,mode}=body||{};
     if(typeof url!=='string'||typeof markdown!=='string'||!['create','update'].includes(mode)||
@@ -142,10 +143,11 @@ export async function POST(request:NextRequest){
         console.error('Could not clean up RepoPilot branch',cleanupError instanceof Error?cleanupError.message:cleanupError);
       }
     }
-    console.error('Pull request publishing failed',e instanceof Error?e.message:e);
+    console.error('Pull request publishing failed',{status:e instanceof GitHubError?e.status:'unexpected',type:e instanceof Error?e.name:'unknown'});
     if(e instanceof GitHubError){
       const status=e.status===401?401:e.status===403?403:e.status===404?404:e.status===409||e.status===422?409:e.status===429?429:502;
-      return NextResponse.json({error:status===502?'GitHub request failed. Please retry later.':`GitHub: ${e.message}`},{status});
+      const safeMessage=status===401?'GitHub authorization expired. Please reconnect your account.':status===403?'GitHub denied permission for this action.':status===404?'Repository or GitHub resource not found.':status===409?'GitHub reported a conflict. Check for an existing PR or changed README.':status===429?'GitHub rate limit reached. Please retry later.':'GitHub request failed. Please retry later.';
+      return NextResponse.json({error:safeMessage},{status});
     }
     return NextResponse.json({error:'Could not publish the pull request. Please retry.'},{status:502});
   }finally{
