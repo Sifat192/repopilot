@@ -1,9 +1,10 @@
+import {activityUser,recordActivity} from '../../../lib/activity';
 import {checkRateLimit} from '../../../lib/rate-limit';
-import {NextResponse} from 'next/server';
+import {NextRequest,NextResponse} from 'next/server';
 export const runtime='nodejs';
 export const maxDuration=60;
 const allowed=/\.(md|txt|json|ya?ml|toml|js|jsx|ts|tsx|py|go|rs|java|sh|html|css|sql|c|cpp|h)$/i;
-export async function POST(request:Request){try{
+export async function POST(request:NextRequest){try{
 const limited=await checkRateLimit(request,'generate');if(limited)return limited;
 const {url,mode}=await request.json();
 if(typeof url!=='string'||!['create','update'].includes(mode))return NextResponse.json({error:'Invalid input'},{status:400});
@@ -86,5 +87,6 @@ let markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>
 // Retired model names must never be offered as working configuration examples.
 if(owner.toLowerCase()==='sifat192'&&repo.toLowerCase()==='repopilot')markdown=markdown.replace(/gemini-2\.5-flash(?:-lite)?/gi,'gemini-3.5-flash-lite');
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
+await recordActivity(await activityUser(request),'generation',mode,owner+'/'+repo);
 return NextResponse.json({markdown});
 }catch(e){const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');return NextResponse.json({error:timeout?'Gemini did not respond within 40 seconds. Check Vercel function duration and Gemini model latency in logs.':e instanceof Error?e.message:'Generation failed'},{status:timeout?504:500})}}
