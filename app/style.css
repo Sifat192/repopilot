@@ -148,3 +148,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 [data-theme=light] .studio-notice{background:#e1f4e6;color:#216f37;border-color:#afd9b9}
 [data-theme=light] .studio-error,[data-theme=light] .error{background:#fff0f0;color:#a12626;border-color:#e6b4b4}
 @media(max-width:700px){.navlinks .theme-toggle button{width:26px;height:29px}.dashboard-top-actions .theme-toggle button{width:26px;height:29px}}
+
+[data-theme=light] .signin-main{background:#f6f9f6!important;color:#193422!important}
+[data-theme=light] .signin-panel{background:#fff!important;border-color:#d0e1d3!important;box-shadow:0 20px 60px #18382012}
+[data-theme=light] .signin-panel h1,[data-theme=light] .signin-panel strong{color:#193422}
+[data-theme=light] .signin-panel p{color:#4e6a56!important}
+[data-theme=light] .signin-panel a{color:#26743e!important}
+[data-theme=light] .signin-panel button{border-color:#c7dbcb!important}
+[data-theme=light] .signin-panel button[style*="rgb(30, 48, 39)"],[data-theme=light] .signin-panel button[style*="#1e3027"]{background:#236f3b!important;color:white!important}
