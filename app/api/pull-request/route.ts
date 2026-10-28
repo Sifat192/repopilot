@@ -1,3 +1,4 @@
+import {acquirePublishLock} from '../../../lib/pr-lock';
 import {checkRateLimit} from '../../../lib/rate-limit';
 import {NextRequest,NextResponse} from 'next/server';
 import {getToken} from 'next-auth/jwt';
@@ -25,6 +26,7 @@ async function api(token:string,path:string,init:RequestInit={}){
 }
 export async function POST(request:NextRequest){
   let createdBranch:{base:string;name:string;token:string}|null=null;
+  let releaseLock:(()=>Promise<void>)|null=null;
   try{
     if(!process.env.NEXTAUTH_SECRET)
       return NextResponse.json({error:'GitHub sign-in is not configured.'},{status:503});
@@ -54,15 +56,29 @@ export async function POST(request:NextRequest){
     if(info.private)return NextResponse.json({error:'Private repositories are not supported yet.'},{status:403});
     if(!info.permissions?.push)
       return NextResponse.json({error:'Your GitHub account needs write access to this repository to open a PR.'},{status:403});
+    // A live GitHub identity check ensures the OAuth token is still valid.
+    const identity=await api(token,'/user');
+    if(!identity?.id)throw new GitHubError(401,'GitHub authorization is invalid or expired.');
     const defaultBranch=String(info.default_branch);
     if(!defaultBranch||defaultBranch==='undefined')
       throw new GitHubError(502,'Could not determine the default branch.');
 
-    // Check for existing RepoPilot PRs before making any changes.
-    const openPRs=await api(token,`${base}/pulls?state=open&per_page=100`);
-    const duplicate=Array.isArray(openPRs)?openPRs.find((pr:{head?:{ref?:string;repo?:{full_name?:string}}})=>
-      pr.head?.ref?.startsWith('repopilot/readme-')&&
-      pr.head?.repo?.full_name?.toLowerCase()===`${owner}/${repo}`.toLowerCase()):undefined;
+    releaseLock=await acquirePublishLock(`${owner}/${repo}`);
+    if(!releaseLock)
+      return NextResponse.json({error:'A README publishing operation is already in progress for this repository. Please retry shortly.'},{status:409});
+
+    // Inspect every open PR, not just the first page. Fail closed on very large lists.
+    let duplicate:{html_url?:string}|undefined;
+    for(let page=1;page<=20;page++){
+      const openPRs=await api(token,`${base}/pulls?state=open&per_page=100&page=${page}`);
+      if(!Array.isArray(openPRs))throw new GitHubError(502,'Invalid pull request list.');
+      duplicate=openPRs.find((pr:{head?:{ref?:string;repo?:{full_name?:string}}})=>
+        pr.head?.ref?.startsWith('repopilot/readme-')&&
+        pr.head?.repo?.full_name?.toLowerCase()===`${owner}/${repo}`.toLowerCase());
+      if(duplicate)break;
+      if(openPRs.length<100)break;
+      if(page===20)throw new GitHubError(503,'Too many open pull requests to safely check for duplicates.');
+    }
     if(duplicate)
       return NextResponse.json({
         error:'A RepoPilot pull request is already open for this repository. Review or close it before creating another.',
@@ -128,5 +144,7 @@ export async function POST(request:NextRequest){
       return NextResponse.json({error:`GitHub: ${e.message}`},{status});
     }
     return NextResponse.json({error:'Could not publish the pull request. Please retry.'},{status:502});
+  }finally{
+    if(releaseLock){try{await releaseLock()}catch(e){console.error('Publish lock release failed',e instanceof Error?e.message:e)}}
   }
 }
