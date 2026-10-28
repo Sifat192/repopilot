@@ -19,7 +19,7 @@ const treeRes=await fetch(`https://api.github.com/repos/${owner}/${repo}/git/tre
 if(!treeRes.ok)throw Error('Unable to read repository tree');
 const tree=await treeRes.json();
 const files=(tree.tree||[]).filter((f:any)=>f.type==='blob'&&f.size<30000&&allowed.test(f.path)&&!/(^|\/)(node_modules|dist|build|vendor|\.next|coverage|lockfiles)(\/|$)/.test(f.path));
-const priority=(p:string)=>/^(README\.md|package\.json|pyproject\.toml|Cargo\.toml|go\.mod|requirements\.txt|CONTRIBUTING\.md)$/i.test(p)?0:/^(src|app|lib|docs)\//.test(p)?1:2;
+const priority=(p:string)=>['package.json','pyproject.toml','Cargo.toml','go.mod','requirements.txt'].includes(p)?0:['README.md','.env.example','app/api/generate/route.ts','app/page.tsx','app/api/auth/[...nextauth]/route.ts','src/index.ts','src/index.tsx'].includes(p)?1:/^(src|app|lib|docs)\//.test(p)?2:3;
 files.sort((a:any,b:any)=>priority(a.path)-priority(b.path));
 const chosen=files.slice(0,9);
 const contents=await Promise.all(chosen.map(async(f:any)=>{try{
@@ -82,7 +82,7 @@ return NextResponse.json({error:`Gemini API error (${lastStatus}) on ${lastModel
 }
 let markdown=(data.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 // Retired model names must never be offered as working configuration examples.
-markdown=markdown.replace(/gemini-2\\.5-flash(?:-lite)?/gi,'gemini-3.5-flash-lite');
+markdown=markdown.replace(/gemini-2\.5-flash(?:-lite)?/gi,'gemini-3.5-flash-lite');
 if(!markdown)return NextResponse.json({error:'Gemini returned no documentation. Try a smaller repository or retry.'},{status:502});
 return NextResponse.json({markdown});
 }catch(e){const timeout=e instanceof Error&&(e.name==='TimeoutError'||e.name==='AbortError');return NextResponse.json({error:timeout?'Gemini did not respond within 40 seconds. Check Vercel function duration and Gemini model latency in logs.':e instanceof Error?e.message:'Generation failed'},{status:timeout?504:500})}}
