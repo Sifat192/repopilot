@@ -1,5 +1,5 @@
-import ThemeToggle from '../theme-toggle';
 'use client';
+import ThemeToggle from '../theme-toggle';
 import {useEffect,useState} from 'react';
 import {getSession,signIn,signOut} from 'next-auth/react';
 import ReactMarkdown from 'react-markdown';
