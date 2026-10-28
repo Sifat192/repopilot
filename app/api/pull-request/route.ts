@@ -38,7 +38,9 @@ export async function POST(request:NextRequest){
 
     const limited=await checkRateLimit(request,'publish',String(session?.sub||''));
     if(limited)return limited;
-    const body=await request.json().catch(()=>null);
+    const rawBody=await request.text();
+    if(rawBody.length>400000)return NextResponse.json({error:'Request is too large.'},{status:413});
+    const body=(()=>{try{return JSON.parse(rawBody)}catch{return null}})();
     const {url,markdown,mode}=body||{};
     if(typeof url!=='string'||typeof markdown!=='string'||!['create','update'].includes(mode)||
       markdown.trim().length<10||markdown.length>250000)
@@ -48,7 +50,7 @@ export async function POST(request:NextRequest){
     try{parsed=new URL(url)}catch{return NextResponse.json({error:'Invalid GitHub URL.'},{status:400})}
     const parts=parsed.pathname.split('/').filter(Boolean);
     if(parsed.protocol!=='https:'||parsed.hostname!=='github.com'||parts.length!==2||
-      parsed.search||parsed.hash||!parts.every(p=>/^[\w.-]+$/.test(p)))
+      parsed.search||parsed.hash||parsed.username||parsed.password||parsed.port||!parts.every(p=>/^[A-Za-z0-9_.-]{1,100}$/.test(p)&&p!=='.'&&p!=='..'))
       return NextResponse.json({error:'Use a public https://github.com/owner/repo URL.'},{status:400});
 
     const [owner,repo]=parts;
@@ -143,7 +145,7 @@ export async function POST(request:NextRequest){
     console.error('Pull request publishing failed',e instanceof Error?e.message:e);
     if(e instanceof GitHubError){
       const status=e.status===401?401:e.status===403?403:e.status===404?404:e.status===409||e.status===422?409:e.status===429?429:502;
-      return NextResponse.json({error:`GitHub: ${e.message}`},{status});
+      return NextResponse.json({error:status===502?'GitHub request failed. Please retry later.':`GitHub: ${e.message}`},{status});
     }
     return NextResponse.json({error:'Could not publish the pull request. Please retry.'},{status:502});
   }finally{
