@@ -1,5 +1,5 @@
-import ThemeToggle from '../theme-toggle';
 'use client';
+import ThemeToggle from '../theme-toggle';
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {signIn,signOut} from 'next-auth/react';
