@@ -1,3 +1,4 @@
+import {checkRateLimit} from '../../../lib/rate-limit';
 import {NextRequest,NextResponse} from 'next/server';
 import {getToken} from 'next-auth/jwt';
 import {randomUUID} from 'crypto';
@@ -32,6 +33,8 @@ export async function POST(request:NextRequest){
     if(typeof token!=='string'||!token)
       return NextResponse.json({error:'Connect your GitHub account before publishing a pull request.'},{status:401});
 
+    const limited=await checkRateLimit(request,'publish',String(session?.sub||''));
+    if(limited)return limited;
     const body=await request.json().catch(()=>null);
     const {url,markdown,mode}=body||{};
     if(typeof url!=='string'||typeof markdown!=='string'||!['create','update'].includes(mode)||
