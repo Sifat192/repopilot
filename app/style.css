@@ -96,3 +96,55 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:1080px){.studio-heading{align-items:flex-start;flex-direction:column}.studio-config{flex-wrap:wrap}.studio-repo-field{flex-basis:100%}.studio-panes{min-height:490px}.studio-pane{min-height:490px}.studio-pane textarea{min-height:440px}}
 @media(max-width:700px){.studio-header{height:65px;padding:0 15px}.studio-header-left{gap:10px}.studio-breadcrumb,.studio-connection{display:none}.studio-main{padding:29px 14px}.studio-heading h1{font-size:35px}.studio-heading-actions{width:100%}.studio-heading-actions>*{flex:1}.studio-config{padding:14px;gap:13px}.studio-mode-field{width:100%}.studio-mode-buttons button{flex:1;justify-content:center}.studio-generate{width:100%}.studio-workspace-toolbar{padding:12px}.studio-toolbar-actions{width:100%;justify-content:space-between}.studio-view-switch{flex:1}.studio-view-switch button{flex:1;justify-content:center;padding:10px 6px}.studio-panes{display:block}.studio-pane+.studio-pane{border-left:0;border-top:1px solid #304435}.studio-pane{min-height:400px}.studio-pane textarea{min-height:360px}.studio-rendered{min-height:350px;max-height:540px}.studio-preview-empty{min-height:320px}.studio-bottom{flex-direction:column}.studio-file>span{max-width:160px}}
 @media(max-width:400px){.studio-dashboard-link{font-size:0}.studio-dashboard-link svg{width:19px;height:19px}.studio-copy{font-size:0;padding:10px}.studio-file>span{max-width:115px}}
+
+
+/* Global theme selector */
+.theme-toggle{display:inline-flex;align-items:center;gap:2px;padding:3px;background:#142019;border:1px solid #37503e;border-radius:10px;flex-shrink:0}
+.theme-toggle button{display:grid;place-items:center;width:31px;height:31px;padding:0;background:transparent;border:0;border-radius:7px;color:#a4bca9}
+.theme-toggle button[aria-pressed=true]{background:#31563b;color:#c5ffd1}
+[data-theme=light]{color-scheme:light}
+[data-theme=light] body{background:#f6f9f6;color:#16281b}
+[data-theme=light] .shell,[data-theme=light] .dashboard-shell,[data-theme=light] .studio-shell{background:#f6f9f6;color:#16281b}
+[data-theme=light] .nav,[data-theme=light] .footer,[data-theme=light] .dashboard-topbar,[data-theme=light] .studio-header{border-color:#d5e3d7}
+[data-theme=light] .navlinks a,[data-theme=light] .sub,[data-theme=light] .section>p,[data-theme=light] .hint,[data-theme=light] .dashboard-heading p,[data-theme=light] .repo-section-head p,[data-theme=light] .studio-heading p{color:#526e5a}
+[data-theme=light] .hero h1,[data-theme=light] .section h2,[data-theme=light] .dashboard-heading h1,[data-theme=light] .studio-heading h1{color:#172c1d}
+[data-theme=light] .hero h1 span,[data-theme=light] .dashboard-heading h1 span,[data-theme=light] .studio-heading h1 span,[data-theme=light] .eyebrow,[data-theme=light] .dashboard-kicker,[data-theme=light] .studio-kicker{color:#23713a}
+[data-theme=light] .workspace,[data-theme=light] .card,[data-theme=light] .result,[data-theme=light] .metric-card,[data-theme=light] .repository-card,[data-theme=light] .studio-config,[data-theme=light] .studio-workspace,[data-theme=light] .repo-search,[data-theme=light] .repo-filter{background:#fff;border-color:#d5e4d7;box-shadow:0 8px 30px #18382009}
+[data-theme=light] .workspacehead,[data-theme=light] .resultbar,[data-theme=light] .studio-workspace-toolbar,[data-theme=light] .studio-pane-title,[data-theme=light] .studio-statusbar,[data-theme=light] .repository-footer{border-color:#d5e4d7;color:#2e5939}
+[data-theme=light] .workspacehead span,[data-theme=light] .label,[data-theme=light] .studio-repo-field label,[data-theme=light] .studio-mode-field>span{color:#3b6748}
+[data-theme=light] .repo,[data-theme=light] .studio-repo-input,[data-theme=light] .studio-mode-buttons,[data-theme=light] .studio-view-switch,[data-theme=light] .markdown-editor,[data-theme=light] .studio-pane textarea{background:#f8fbf8;border-color:#cbdccd;color:#183321}
+[data-theme=light] input,[data-theme=light] textarea{color:#183321}
+[data-theme=light] input::placeholder,[data-theme=light] textarea::placeholder{color:#7c9782}
+[data-theme=light] .primary,[data-theme=light] .dashboard-cta,[data-theme=light] .feature-button,[data-theme=light] .studio-publish,[data-theme=light] .studio-generate{background:#226f3a;border-color:#226f3a;color:white}
+[data-theme=light] .mode,[data-theme=light] .outline,[data-theme=light] .small,[data-theme=light] .refresh-button,[data-theme=light] .studio-outline,[data-theme=light] .studio-copy{color:#295837;border-color:#bed5c4;background:#f8fbf8}
+[data-theme=light] .mode.active,[data-theme=light] .resultactions .selected,[data-theme=light] .studio-mode-buttons button.active,[data-theme=light] .studio-view-switch button.active,[data-theme=light] .repo-filter button.active{background:#dcf3e2;color:#176a30;border-color:#70b781}
+[data-theme=light] .markdown-preview,[data-theme=light] .studio-rendered{color:#233a2a}
+[data-theme=light] .markdown-preview h1,[data-theme=light] .markdown-preview h2,[data-theme=light] .markdown-preview h3,[data-theme=light] .studio-rendered h1,[data-theme=light] .studio-rendered h2,[data-theme=light] .studio-rendered h3{color:#183321;border-color:#d1e2d4}
+[data-theme=light] .markdown-preview pre,[data-theme=light] .studio-rendered pre,[data-theme=light] .markdown-preview code,[data-theme=light] .studio-rendered code{background:#edf4ee;color:#21442c;border-color:#cbdccd}
+[data-theme=light] .dashboard-sidebar{background:#edf5ef;border-color:#d3e3d6}
+[data-theme=light] .dashboard-brand,[data-theme=light] .studio-brand,[data-theme=light] .breadcrumbs strong{color:#183321}
+[data-theme=light] .sidebar-link{color:#45634d}
+[data-theme=light] .sidebar-link.current,[data-theme=light] .sidebar-link:hover{background:#d9eddf;color:#176c31;border-color:#badbc2}
+[data-theme=light] .sidebar-tip{background:linear-gradient(145deg,#e1f3e5,#f1f8f2);border-color:#c4dfcb;color:#244c2e}
+[data-theme=light] .sidebar-tip p,[data-theme=light] .metric-card>span,[data-theme=light] .metric-card>small,[data-theme=light] .repository-card>p,[data-theme=light] .repository-meta,[data-theme=light] .dashboard-disclaimer,[data-theme=light] .dashboard-footer{color:#597462}
+[data-theme=light] .metric-card>strong,[data-theme=light] .repository-card h3,[data-theme=light] .repo-section-head h2{color:#17331f}
+[data-theme=light] .metric-icon,[data-theme=light] .repository-symbol{background:#e3f3e7;color:#26763c}
+[data-theme=light] .dashboard-feature{background:linear-gradient(115deg,#e3f4e8,#d3ebda);border-color:#b5d9bd}
+[data-theme=light] .feature-copy h2{color:#193b23}
+[data-theme=light] .feature-copy h2 em,[data-theme=light] .feature-label{color:#22713b}
+[data-theme=light] .feature-copy p{color:#486b52}
+[data-theme=light] .repo-search input{color:#183321}
+[data-theme=light] .repo-filter button,[data-theme=light] .studio-mode-buttons button,[data-theme=light] .studio-view-switch button{color:#486b52}
+[data-theme=light] .repository-action,[data-theme=light] .studio-bottom a,[data-theme=light] .studio-rendered a,[data-theme=light] .markdown-preview a{color:#176c31}
+[data-theme=light] .studio-pane+.studio-pane{border-color:#d5e4d7}
+[data-theme=light] .studio-pane-title,[data-theme=light] .studio-file strong{color:#2c603a}
+[data-theme=light] .studio-rendered,[data-theme=light] .studio-pane textarea{background:#fff}
+[data-theme=light] .studio-preview-empty h3{color:#1d3a25}
+[data-theme=light] .studio-preview-empty p,[data-theme=light] .studio-statusbar,[data-theme=light] .studio-bottom{color:#597462}
+[data-theme=light] .theme-toggle{background:#e5f1e8;border-color:#bfd7c5}
+[data-theme=light] .theme-toggle button{color:#456b50}
+[data-theme=light] .theme-toggle button[aria-pressed=true]{background:#fff;color:#176c31;box-shadow:0 1px 4px #18382020}
+[data-theme=light] .studio-connection,[data-theme=light] .studio-dashboard-link,[data-theme=light] .top-home{color:#416c4b}
+[data-theme=light] .studio-notice{background:#e1f4e6;color:#216f37;border-color:#afd9b9}
+[data-theme=light] .studio-error,[data-theme=light] .error{background:#fff0f0;color:#a12626;border-color:#e6b4b4}
+@media(max-width:700px){.navlinks .theme-toggle button{width:26px;height:29px}.dashboard-top-actions .theme-toggle button{width:26px;height:29px}}
