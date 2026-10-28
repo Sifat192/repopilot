@@ -10,8 +10,8 @@ export default function SignInPage(){
   const[providers,setProviders]=useState<Record<string,Provider>|null>(null);
   const[error,setError]=useState('');
   useEffect(()=>{getProviders().then(p=>setProviders(p as Record<string,Provider>||{})).catch(()=>setError('Could not load sign-in providers. Try again.'))},[]);
-  return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#0b1110',color:'#edf7ee',padding:24,fontFamily:'system-ui,sans-serif'}}>
-    <section style={{width:'100%',maxWidth:420,padding:32,border:'1px solid #294037',borderRadius:20,background:'#121c18'}}>
+  return <main className="signin-main" style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#0b1110',color:'#edf7ee',padding:24,fontFamily:'system-ui,sans-serif'}}>
+    <section className="signin-panel" style={{width:'100%',maxWidth:420,padding:32,border:'1px solid #294037',borderRadius:20,background:'#121c18'}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}><Link href="/" style={{color:'#b7edc6',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:8}}><ArrowLeft size={16}/> Back to RepoPilot</Link><ThemeToggle/></div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginTop:32}}><Terminal color="#a8f0b9"/><strong style={{fontSize:23}}>repopilot.</strong></div>
       <h1 style={{fontSize:28,margin:'22px 0 8px'}}>Welcome back</h1>
